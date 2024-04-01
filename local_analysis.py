@@ -31,6 +31,7 @@ parser.add_argument('-model', nargs=1, type=str)
 parser.add_argument('-imgdir', nargs=1, type=str)
 parser.add_argument('-img', nargs=1, type=str)
 parser.add_argument('-imgclass', nargs=1, type=int, default=-1)
+parser.add_argument('-kclass', type=int)
 args = parser.parse_args()
 
 os.environ['CUDA_VISIBLE_DEVICES'] = args.gpuid[0]
@@ -60,6 +61,7 @@ experiment_run = '/'.join(load_model_dir.split('/')[3:])
 
 save_analysis_path = os.path.join(test_image_dir, model_base_architecture,
                                   experiment_run, load_model_name)
+print('save_analysis_path:', save_analysis_path)
 makedir(save_analysis_path)
 
 log, logclose = create_logger(log_filename=os.path.join(save_analysis_path, 'local_analysis.log'))
@@ -270,7 +272,7 @@ for i in range(1,11):
     log('--------------------------------------------------------------')
 
 ##### PROTOTYPES FROM TOP-k CLASSES
-k = 50
+k = args.kclass
 log('Prototypes from top-%d classes:' % k)
 topk_logits, topk_classes = torch.topk(logits[idx], k=k)
 for i,c in enumerate(topk_classes.detach().cpu().numpy()):

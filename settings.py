@@ -1,13 +1,13 @@
 base_architecture = 'vgg19'
 img_size = 224
-prototype_shape = (2000, 128, 1, 1)
-num_classes = 200
+prototype_shape = (80, 128, 1, 1)
+num_classes = 2
 prototype_activation_function = 'log'
 add_on_layers_type = 'regular'
 
 experiment_run = '003'
 
-data_path = './datasets/cub200_cropped/'
+data_path = '/home/cougarnet.uh.edu/hqvo2/Projects/Spatial_Transcriptomics/data/processed_data/lib_data/ProtoPNet_data/GeoMX_ROIs/norm_data/split_0/'
 train_dir = data_path + 'train_cropped_augmented/'
 test_dir = data_path + 'test_cropped/'
 train_push_dir = data_path + 'train_cropped/'
@@ -32,8 +32,8 @@ coefs = {
     'l1': 1e-4,
 }
 
-num_train_epochs = 1000
+num_train_epochs = 20
 num_warm_epochs = 5
 
 push_start = 10
-push_epochs = [i for i in range(num_train_epochs) if i % 10 == 0]
+push_epochs = [i for i in range(num_train_epochs)]

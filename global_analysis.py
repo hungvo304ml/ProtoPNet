@@ -95,7 +95,10 @@ def save_prototype_original_img_with_bbox(fname, epoch, index,
     #plt.axis('off')
     plt.imsave(fname, p_img_rgb)
 
-for j in range(ppnet.num_prototypes):
+
+# for j in range(ppnet.num_prototypes):
+# TODO: need to comeback here
+for j in range(20):
     makedir(os.path.join(root_dir_for_saving_train_images, str(j)))
     makedir(os.path.join(root_dir_for_saving_test_images, str(j)))
     save_prototype_original_img_with_bbox(fname=os.path.join(root_dir_for_saving_train_images, str(j),
