@@ -94,7 +94,10 @@ base_architecture_type = re.match('^[a-z]*', base_architecture).group(0)
 model_dir = './saved_models/' + base_architecture + '/' + experiment_run + '/'
 makedir(model_dir)
 shutil.copy(src=os.path.join(os.getcwd(), __file__), dst=model_dir)
-shutil.copy(src=os.path.join(os.getcwd(), 'settings.py'), dst=model_dir)
+# shutil.copy(src=os.path.join(os.getcwd(), 'settings.py'), dst=model_dir)
+with open(os.path.join(model_dir, 'settings.yaml'), 'w') as yamlfile:
+    data = yaml.dump(yaml_cfg, yamlfile)
+    
 shutil.copy(src=os.path.join(os.getcwd(), base_architecture_type + '_features.py'), dst=model_dir)
 shutil.copy(src=os.path.join(os.getcwd(), 'model.py'), dst=model_dir)
 shutil.copy(src=os.path.join(os.getcwd(), 'train_and_test.py'), dst=model_dir)
@@ -140,6 +143,18 @@ train_push_dataset = datasets.ImageFolder(
 train_push_loader = torch.utils.data.DataLoader(
     train_push_dataset, batch_size=train_push_batch_size, shuffle=False,
     num_workers=4, pin_memory=False)
+
+# push set for visualization
+train_push_vis_dataset = datasets.ImageFolder(
+    train_push_dir,
+    transforms.Compose([        
+        transforms.Resize(size=(1024, 1024)),
+        transforms.ToTensor(),
+    ]))
+train_push_vis_loader = torch.utils.data.DataLoader(
+    train_push_vis_dataset, batch_size=train_push_batch_size, shuffle=False,
+    num_workers=4, pin_memory=False)
+
 # test set
 test_dataset = datasets.ImageFolder(
     test_dir,
@@ -226,11 +241,12 @@ for epoch in range(num_train_epochs):
     accu = tnt.test(model=ppnet_multi, dataloader=test_loader,
                     class_specific=class_specific, log=log)
     save.save_model_w_condition(model=ppnet, model_dir=model_dir, model_name=str(epoch) + 'nopush', accu=accu,
-                                target_accu=0.50, log=log)
+                                target_accu=0, log=log)
 
     if epoch >= push_start and epoch in push_epochs:
         push.push_prototypes(
             train_push_loader, # pytorch dataloader (must be unnormalized in [0,1])
+            vis_loader=train_push_vis_loader,
             prototype_network_parallel=ppnet_multi, # pytorch network with prototype_vectors
             class_specific=class_specific,
             preprocess_input_function=preprocess_input_function, # normalize if needed
@@ -245,7 +261,7 @@ for epoch in range(num_train_epochs):
         accu = tnt.test(model=ppnet_multi, dataloader=test_loader,
                         class_specific=class_specific, log=log)
         save.save_model_w_condition(model=ppnet, model_dir=model_dir, model_name=str(epoch) + 'push', accu=accu,
-                                    target_accu=0.50, log=log)
+                                    target_accu=0, log=log)
 
         if prototype_activation_function != 'linear':
             tnt.last_only(model=ppnet_multi, log=log)
@@ -256,7 +272,7 @@ for epoch in range(num_train_epochs):
                 accu = tnt.test(model=ppnet_multi, dataloader=test_loader,
                                 class_specific=class_specific, log=log)
                 save.save_model_w_condition(model=ppnet, model_dir=model_dir, model_name=str(epoch) + '_' + str(i) + 'push', accu=accu,
-                                            target_accu=0.50, log=log)
+                                            target_accu=0, log=log)
    
 logclose()
 

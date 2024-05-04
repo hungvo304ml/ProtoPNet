@@ -289,6 +289,7 @@ def construct_PPNet(base_architecture, pretrained=True, img_size=224,
                     prototype_shape=(2000, 512, 1, 1), num_classes=200,
                     prototype_activation_function='log',
                     add_on_layers_type='bottleneck'):
+    
     features = base_architecture_to_features[base_architecture](pretrained=pretrained)
     layer_filter_sizes, layer_strides, layer_paddings = features.conv_info()
     proto_layer_rf_info = compute_proto_layer_rf_info_v2(img_size=img_size,
@@ -296,6 +297,7 @@ def construct_PPNet(base_architecture, pretrained=True, img_size=224,
                                                          layer_strides=layer_strides,
                                                          layer_paddings=layer_paddings,
                                                          prototype_kernel_size=prototype_shape[2])
+    
     return PPNet(features=features,
                  img_size=img_size,
                  prototype_shape=prototype_shape,
