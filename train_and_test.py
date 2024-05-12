@@ -2,6 +2,8 @@ import time
 import torch
 
 from helpers import list_of_distances, make_one_hot
+from torchmetrics.classification import AUROC, AveragePrecision
+from tqdm import tqdm
 
 def _train_or_test(model, dataloader, optimizer=None, class_specific=True, use_l1_mask=True,
                    coefs=None, log=print):
@@ -21,9 +23,22 @@ def _train_or_test(model, dataloader, optimizer=None, class_specific=True, use_l
     total_separation_cost = 0
     total_avg_separation_cost = 0
 
-    for i, (image, label) in enumerate(dataloader):
+    all_outputs = None
+    all_targets = None
+
+    auroc = AUROC(task="binary")
+    average_precision  = AveragePrecision(task="binary")
+
+    for i, (image, label) in tqdm(enumerate(dataloader), total=len(dataloader)):
+
+        
         input = image.cuda()
         target = label.cuda()
+
+        if all_targets is None:
+            all_targets = target
+        else:
+            all_targets = torch.cat((all_targets, target), 0)
 
         # torch.enable_grad() has no effect outside of no_grad()
         grad_req = torch.enable_grad() if is_train else torch.no_grad()
@@ -31,6 +46,11 @@ def _train_or_test(model, dataloader, optimizer=None, class_specific=True, use_l
             # nn.Module has implemented __call__() function
             # so no need to call .forward
             output, min_distances = model(input)
+
+            if all_outputs is None:
+                all_outputs = output
+            else:
+                all_outputs = torch.cat((all_outputs, output), 0)
 
             # compute loss
             cross_entropy = torch.nn.functional.cross_entropy(output, target)
@@ -69,6 +89,8 @@ def _train_or_test(model, dataloader, optimizer=None, class_specific=True, use_l
                 l1 = model.module.last_layer.weight.norm(p=1)
 
             # evaluation statistics
+      
+        
             _, predicted = torch.max(output.data, 1)
             n_examples += target.size(0)
             n_correct += (predicted == target).sum().item()
@@ -108,6 +130,10 @@ def _train_or_test(model, dataloader, optimizer=None, class_specific=True, use_l
 
     end = time.time()
 
+    
+    auc = auroc(torch.nn.functional.softmax(all_outputs, dim=1)[:, 1], all_targets).item()
+    ap = average_precision(torch.nn.functional.softmax(all_outputs, dim=1)[:, 1], all_targets).item()    
+
     log('\ttime: \t{0}'.format(end -  start))
     log('\tcross ent: \t{0}'.format(total_cross_entropy / n_batches))
     log('\tcluster: \t{0}'.format(total_cluster_cost / n_batches))
@@ -121,7 +147,7 @@ def _train_or_test(model, dataloader, optimizer=None, class_specific=True, use_l
         p_avg_pair_dist = torch.mean(list_of_distances(p, p))
     log('\tp dist pair: \t{0}'.format(p_avg_pair_dist.item()))
 
-    return n_correct / n_examples
+    return n_correct / n_examples, auc, ap
 
 
 def train(model, dataloader, optimizer, class_specific=False, coefs=None, log=print):

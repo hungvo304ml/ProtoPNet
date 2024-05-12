@@ -20,10 +20,13 @@ import save
 import yaml
 from log import create_logger
 from preprocess import mean, std, preprocess_input_function
+from lightning.pytorch import seed_everything
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--config-path", dest="config_path", required=True)
 parser.add_argument('-gpuid', nargs=1, type=str, default='0') # python3 main.py -gpuid=0,1,2,3
+parser.add_argument("-workers", "--workers", type=int)
 
 parser.add_argument("-arch", "--base_architecture", type=str, default='vgg19')
 parser.add_argument("-imsize", "--img_size", type=int, default=224)
@@ -77,7 +80,7 @@ print(yaml_cfg)
 
 
 
-
+seed_everything(seed=42, workers=True)
 
 # book keeping namings and code
 # from settings import base_architecture, img_size, prototype_shape, num_classes, \
@@ -132,7 +135,7 @@ train_dataset = datasets.ImageFolder(
     ]))
 train_loader = torch.utils.data.DataLoader(
     train_dataset, batch_size=train_batch_size, shuffle=True,
-    num_workers=4, pin_memory=False)
+    num_workers=args.workers, pin_memory=False)
 # push set
 train_push_dataset = datasets.ImageFolder(
     train_push_dir,
@@ -142,7 +145,7 @@ train_push_dataset = datasets.ImageFolder(
     ]))
 train_push_loader = torch.utils.data.DataLoader(
     train_push_dataset, batch_size=train_push_batch_size, shuffle=False,
-    num_workers=4, pin_memory=False)
+    num_workers=args.workers, pin_memory=False)
 
 # push set for visualization
 train_push_vis_dataset = datasets.ImageFolder(
@@ -153,7 +156,7 @@ train_push_vis_dataset = datasets.ImageFolder(
     ]))
 train_push_vis_loader = torch.utils.data.DataLoader(
     train_push_vis_dataset, batch_size=train_push_batch_size, shuffle=False,
-    num_workers=4, pin_memory=False)
+    num_workers=args.workers, pin_memory=False)
 
 # test set
 test_dataset = datasets.ImageFolder(
@@ -165,7 +168,7 @@ test_dataset = datasets.ImageFolder(
     ]))
 test_loader = torch.utils.data.DataLoader(
     test_dataset, batch_size=test_batch_size, shuffle=False,
-    num_workers=4, pin_memory=False)
+    num_workers=args.workers, pin_memory=False)
 
 # we should look into distributed sampler more carefully at torch.utils.data.distributed.DistributedSampler(train_dataset)
 log('training set size: {0}'.format(len(train_loader.dataset)))
@@ -238,9 +241,9 @@ for epoch in range(num_train_epochs):
         _ = tnt.train(model=ppnet_multi, dataloader=train_loader, optimizer=joint_optimizer,
                       class_specific=class_specific, coefs=coefs, log=log)
 
-    accu = tnt.test(model=ppnet_multi, dataloader=test_loader,
+    accu, auc, ap = tnt.test(model=ppnet_multi, dataloader=test_loader,
                     class_specific=class_specific, log=log)
-    save.save_model_w_condition(model=ppnet, model_dir=model_dir, model_name=str(epoch) + 'nopush', accu=accu,
+    save.save_model_w_condition(model=ppnet, model_dir=model_dir, model_name=str(epoch) + 'nopush', accu=accu, auc=auc, ap=ap,
                                 target_accu=0, log=log)
 
     if epoch >= push_start and epoch in push_epochs:
@@ -258,9 +261,9 @@ for epoch in range(num_train_epochs):
             proto_bound_boxes_filename_prefix=proto_bound_boxes_filename_prefix,
             save_prototype_class_identity=True,
             log=log)
-        accu = tnt.test(model=ppnet_multi, dataloader=test_loader,
+        accu, auc, ap = tnt.test(model=ppnet_multi, dataloader=test_loader,
                         class_specific=class_specific, log=log)
-        save.save_model_w_condition(model=ppnet, model_dir=model_dir, model_name=str(epoch) + 'push', accu=accu,
+        save.save_model_w_condition(model=ppnet, model_dir=model_dir, model_name=str(epoch) + 'push', accu=accu, auc=auc, ap=ap,
                                     target_accu=0, log=log)
 
         if prototype_activation_function != 'linear':
@@ -269,9 +272,9 @@ for epoch in range(num_train_epochs):
                 log('iteration: \t{0}'.format(i))
                 _ = tnt.train(model=ppnet_multi, dataloader=train_loader, optimizer=last_layer_optimizer,
                               class_specific=class_specific, coefs=coefs, log=log)
-                accu = tnt.test(model=ppnet_multi, dataloader=test_loader,
+                accu, auc, ap = tnt.test(model=ppnet_multi, dataloader=test_loader,
                                 class_specific=class_specific, log=log)
-                save.save_model_w_condition(model=ppnet, model_dir=model_dir, model_name=str(epoch) + '_' + str(i) + 'push', accu=accu,
+                save.save_model_w_condition(model=ppnet, model_dir=model_dir, model_name=str(epoch) + '_' + str(i) + 'push', accu=accu, auc=auc, ap=ap,
                                             target_accu=0, log=log)
    
 logclose()
