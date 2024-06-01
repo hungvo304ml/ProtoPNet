@@ -10,9 +10,9 @@ def makedir(path):
         os.makedirs(path)
 
 
-datasets_root_dir = '/home/hqvo2/Projects/Spatial_Transcriptomics/data/processed_data/lib_data/ProtoPNet_data/GeoMX_patches_plus_rois_balanced_organ/overlapped_0.7/split_0/'
-dir = datasets_root_dir + 'train_cropped/'
-target_dir = datasets_root_dir + 'train_cropped_augmented/'
+datasets_root_dir = '/home/hqvo2/Projects/Spatial_Transcriptomics/data/processed_data/lib_data/ProtoPNet_data/GeoMX_patches_plus_rois_balanced_organ/overlapped_0.5_train-val-test/split_0/'
+dir = datasets_root_dir + 'train_val_cropped/'
+target_dir = datasets_root_dir + 'train_val_cropped_augmented/'
 
 assert os.path.exists(datasets_root_dir)
 assert os.path.exists(dir)
